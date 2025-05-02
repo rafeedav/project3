@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: network-app
+  labels:
+    app: network-app
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: network-app
+  template:
+    metadata:
+      labels:
+        app: network-app
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /metrics
+        prometheus.io/port: "3000"
+    spec:
+      containers:
+        - name: network-app
+          image: image1
+          ports:
+            - containerPort: 8081
+          livenessProbe:
+            httpGet:
+              path: /devices
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /devices
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
