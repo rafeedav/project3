@@ -1,42 +1,40 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: network-app
+  name: network-monitor-deployment
   labels:
-    app: network-app
+    app: network-monitor
 spec:
-  replicas: 3
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxUnavailable: 1
-      maxSurge: 1
+  replicas: 2
   selector:
     matchLabels:
-      app: network-app
+      app: network-monitor
   template:
     metadata:
       labels:
-        app: network-app
-      annotations:
-        prometheus.io/scrape: "true"
-        prometheus.io/path: /metrics
-        prometheus.io/port: "9090"
+        app: network-monitor
     spec:
       containers:
-        - name: network-app
-          image: image1
-          ports:
-            - containerPort: 8081
-          livenessProbe:
-            httpGet:
-              path: /devices
-              port: 8081
-            initialDelaySeconds: 10
-            periodSeconds: 10
-          readinessProbe:
-            httpGet:
-              path: /devices
-              port: 8081
-            initialDelaySeconds: 5
-            periodSeconds: 10
+      - name: network-monitor
+        image: network-monitor:latest
+        ports:
+        - containerPort: 3000
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "250m"
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
