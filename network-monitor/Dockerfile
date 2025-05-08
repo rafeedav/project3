@@ -1,19 +1,18 @@
-FROM node:18
+# Use official Node.js LTS image
+FROM node:18-alpine
 
 # Set working directory
-WORKDIR /app
+WORKDIR /usr/src/app
 
-# Copy only package.json and package-lock.json (if present) to leverage Docker cache
+# Copy package files and install dependencies
 COPY package*.json ./
-
-# Install dependencies
 RUN npm install --production
 
-# Copy all other files into the container
+# Copy source code
 COPY . .
 
-# Expose the correct port the app runs on (3000)
+# Expose app port
 EXPOSE 3000
 
-# Run the application
-CMD ["npm", "start"]
+# Run the app
+CMD ["node", "src/index.js"]
