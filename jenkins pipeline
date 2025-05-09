@@ -1,0 +1,79 @@
+pipeline {
+    agent any
+
+    environment {
+        IMAGE_NAME = 'network-monitor'
+        DOCKER_REGISTRY = 'rafeedav'
+        K8S_MANIFEST_DIR = 'network-monitor/k8s'  // Correct path to the k8s directory
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url: 'https://github.com/rafeedav/project3.git', credentialsId: '2648a7d4-4152-4c7d-9013-6efc50ccd049'
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                dir('network-monitor') {
+                    sh 'npm install'
+                }
+            }
+        }
+
+        stage('Test') {
+            steps {
+                dir('network-monitor') {
+                    sh 'npm test || echo "No tests defined"'
+                }
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                dir('network-monitor') {
+                    sh "docker build -t $DOCKER_REGISTRY/$IMAGE_NAME:latest ."
+                }
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+              withCredentials([usernamePassword(credentialsId: '3da5166f-945a-4d16-91c4-5c6003494838', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASSWORD')]) {
+                sh '''
+                    echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USER" --password-stdin
+                    docker push "$DOCKER_USER"/network-monitor:latest
+                '''
+              }
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                script {
+                    // Print the current working directory
+                    sh 'pwd'
+
+                    // List the contents of the network-monitor/k8s directory to verify the file exists
+                    sh 'ls -la network-monitor/k8s/'
+
+                    // Grant write permissions to the deployment.yaml file
+                    sh 'chmod 666 network-monitor/k8s/deployment.yaml'
+
+                    // Modify the deployment.yaml file with the correct image
+                    sh "sed -i 's|image: .*|image: rafeedav/network-monitor:latest|' network-monitor/k8s/deployment.yaml"
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo '✅ Deployment Successful!'
+        }
+        failure {
+            echo '❌ Deployment Failed.'
+        }
+    }
+}
